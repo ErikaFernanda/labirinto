@@ -1,0 +1,25 @@
+# depslib dependency file v1.0
+1665252671 source:c:\projetos\labirinto\coord.cpp
+	<cmath>
+	"coord.h"
+
+1665252671 c:\projetos\labirinto\coord.h
+	<iostream>
+
+1665762216 source:c:\projetos\labirinto\labirinto.cpp
+	<iomanip>
+	<fstream>
+	<list>
+	<algorithm>
+	"labirinto.h"
+
+1665761694 c:\projetos\labirinto\labirinto.h
+	<vector>
+	"coord.h"
+
+1665252671 source:c:\projetos\labirinto\labirinto_main.cpp
+	<iostream>
+	<iomanip>
+	<chrono>
+	"labirinto.h"
+

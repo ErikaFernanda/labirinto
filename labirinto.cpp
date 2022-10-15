@@ -2,6 +2,7 @@
 #include <fstream>
 #include <list>
 #include <algorithm>
+#include <cmath>
 
 #include "labirinto.h"
 
@@ -13,7 +14,7 @@ using namespace std;
 
 string estadoCel2string(EstadoCel E)
 {
-  switch(E)
+  switch (E)
   {
   case EstadoCel::LIVRE:
     return "  ";
@@ -39,7 +40,7 @@ string estadoCel2string(EstadoCel E)
 /// Construtores
 
 /// Default (labirinto vazio)
-Labirinto::Labirinto(): NLin(0), NCol(0), mapa(), orig(), dest() {}
+Labirinto::Labirinto() : NLin(0), NCol(0), mapa(), orig(), destino() {}
 
 /// Cria um mapa com dimensoes dadas
 /// numL e numC sao as dimensoes do labirinto
@@ -50,7 +51,7 @@ Labirinto::Labirinto(int numL, int numC)
 
 /// Cria um mapa com o conteudo do arquivo nome_arq
 /// Caso nao consiga ler do arquivo, cria mapa vazio
-Labirinto::Labirinto(const string& nome_arq)
+Labirinto::Labirinto(const string &nome_arq)
 {
   ler(nome_arq);
 }
@@ -65,17 +66,19 @@ void Labirinto::clear()
   NLin = NCol = 0;
   mapa.clear();
   // Apaga a origem e destino do caminho
-  orig = dest = Coord();
+  orig = destino = Coord();
 }
 
 /// Limpa o caminho anterior
 void Labirinto::limpaCaminho()
 {
-  if (!empty()) for (int i=0; i<NLin; i++) for (int j=0; j<NCol; j++)
+  if (!empty())
+    for (int i = 0; i < NLin; i++)
+      for (int j = 0; j < NCol; j++)
       {
-        if (at(i,j) == EstadoCel::CAMINHO)
+        if (at(i, j) == EstadoCel::CAMINHO)
         {
-          set(i,j, EstadoCel::LIVRE);
+          set(i, j, EstadoCel::LIVRE);
         }
       }
 }
@@ -98,23 +101,23 @@ Coord Labirinto::getOrig() const
 
 Coord Labirinto::getDest() const
 {
-  return dest;
+  return destino;
 }
 
 /// Funcao de consulta
 /// Retorna o estado da celula correspondente ao i-j-esimo elemento do mapa
 EstadoCel Labirinto::at(int i, int j) const
 {
-  if (i<0 || i>=NLin || j<0 || j>=NCol)
+  if (i < 0 || i >= NLin || j < 0 || j >= NCol)
   {
     cerr << "Coordenadas invalidas para o labirinto" << endl;
     return EstadoCel::INVALIDO;
   }
-  return mapa.at(NCol*i+j);
+  return mapa.at(NCol * i + j);
 }
 
 /// Retorna o estado da celula C
-EstadoCel Labirinto::at(const Coord& C) const
+EstadoCel Labirinto::at(const Coord &C) const
 {
   return at(C.lin, C.col);
 }
@@ -123,11 +126,11 @@ EstadoCel Labirinto::at(const Coord& C) const
 /// Retorna o estado da celula correspondente ao i-j-esimo elemento do mapa
 EstadoCel Labirinto::operator()(int i, int j) const
 {
-  return at(i,j);
+  return at(i, j);
 }
 
 /// Retorna o estado da celula C
-EstadoCel Labirinto::operator()(const Coord& C) const
+EstadoCel Labirinto::operator()(const Coord &C) const
 {
   return at(C);
 }
@@ -135,7 +138,7 @@ EstadoCel Labirinto::operator()(const Coord& C) const
 /// Funcao set de alteracao de valor
 void Labirinto::set(int i, int j, EstadoCel valor)
 {
-  if (i<0 || i>=NLin || j<0 || j>=NCol)
+  if (i < 0 || i >= NLin || j < 0 || j >= NCol)
   {
     cerr << "Coordenadas invalidas para o labirinto" << endl;
     return;
@@ -145,10 +148,10 @@ void Labirinto::set(int i, int j, EstadoCel valor)
     cerr << "Valor invalido para celula" << endl;
     return;
   }
-  mapa.at(NCol*i+j) = valor;
+  mapa.at(NCol * i + j) = valor;
 }
 
-void Labirinto::set(const Coord& C, EstadoCel valor)
+void Labirinto::set(const Coord &C, EstadoCel valor)
 {
   set(C.lin, C.col, valor);
 }
@@ -162,59 +165,71 @@ bool Labirinto::empty() const
 /// Testa se um mapa tem origem e destino definidos
 bool Labirinto::origDestDefinidos() const
 {
-  return celulaValidaLivre(orig) && celulaValidaLivre(dest);
+  return celulaValidaLivre(orig) && celulaValidaLivre(destino);
 }
 
 /// Testa se uma coordenada de celula eh valida para os limites de um mapa
-bool Labirinto::coordValida(const Coord& C) const
+bool Labirinto::coordValida(const Coord &C) const
 {
-  if (!C.valida()) return false; // Testa valores negativos
-  if (C.lin >= NLin || C.col >= NCol) return false;
+  if (!C.valida())
+    return false; // Testa valores negativos
+  if (C.lin >= NLin || C.col >= NCol)
+    return false;
   return true;
 }
 
 /// Testa se uma celula eh valida e estah livre (nao eh obstaculo) em um mapa
-bool Labirinto::celulaValidaLivre(const Coord& C) const
+bool Labirinto::celulaValidaLivre(const Coord &C) const
 {
-  if (!coordValida(C)) return false;
-  if (at(C) == EstadoCel::OBSTACULO) return false;
+  if (!coordValida(C))
+    return false;
+  if (at(C) == EstadoCel::OBSTACULO)
+    return false;
   return true;
 }
 
 /// Testa se um movimento MovDe->MovPara eh valido
-bool Labirinto::movimentoValido(const Coord& MovDe, const Coord& MovPara) const
+bool Labirinto::movimentoValido(const Coord &MovDe, const Coord &MovPara) const
 {
   // Soh pode mover de e para celulas validas e livres
-  if (!celulaValidaLivre(MovDe)) return false;
-  if (!celulaValidaLivre(MovPara)) return false;
+  if (!celulaValidaLivre(MovDe))
+    return false;
+  if (!celulaValidaLivre(MovPara))
+    return false;
 
   // Soh pode mover para celulas vizinhas, ou seja, a diferenca absoluta
   // na coordenada tanto da linha quanto da coluna eh no maximo 1
-  Coord delta=abs(MovPara-MovDe);
-  if (delta.lin>1 || delta.col>1) return false;
+  Coord delta = abs(MovPara - MovDe);
+  if (delta.lin > 1 || delta.col > 1)
+    return false;
 
   // Nao pode mover em diagonal se colidir com alguma quina
   // Se o movimento nao for diagonal, esses testes sempre dao certo,
   // pois jah testou que MovDe e MovPara estao livres e ou a linha ou a
   // coluna de MovDe e MovPara sao iguais
-  if (!celulaValidaLivre(Coord(MovDe.lin,MovPara.col))) return false;
-  if (!celulaValidaLivre(Coord(MovPara.lin,MovDe.col))) return false;
+  if (!celulaValidaLivre(Coord(MovDe.lin, MovPara.col)))
+    return false;
+  if (!celulaValidaLivre(Coord(MovPara.lin, MovDe.col)))
+    return false;
 
   // Movimento valido
   return true;
 }
 
 /// Fixa a origem do caminho a ser encontrado
-bool Labirinto::setOrigem(const Coord& C)
+bool Labirinto::setOrigem(const Coord &C)
 {
-  if (!celulaValidaLivre(C)) return false;
+  if (!celulaValidaLivre(C))
+    return false;
   // Se for a mesma origen nao faz nada
-  if (C==orig) return true;
+  if (C == orig)
+    return true;
 
   limpaCaminho();
 
   // Apaga a origem anterior no mapa, caso esteja definida
-  if (coordValida(orig)) set(orig, EstadoCel::LIVRE);
+  if (coordValida(orig))
+    set(orig, EstadoCel::LIVRE);
 
   // Fixa a nova origem
   orig = C;
@@ -225,21 +240,24 @@ bool Labirinto::setOrigem(const Coord& C)
 }
 
 /// Fixa o destino do caminho a ser encontrado
-bool Labirinto::setDestino(const Coord& C)
+bool Labirinto::setDestino(const Coord &C)
 {
-  if (!celulaValidaLivre(C)) return false;
+  if (!celulaValidaLivre(C))
+    return false;
   // Se for o mesmo destino nao faz nada
-  if (C==dest) return true;
+  if (C == destino)
+    return true;
 
   limpaCaminho();
 
   // Apaga o destino anterior no mapa, caso esteja definido
-  if (coordValida(dest)) set(dest, EstadoCel::LIVRE);
+  if (coordValida(destino))
+    set(destino, EstadoCel::LIVRE);
 
   // Fixa o novo destino
-  dest = C;
+  destino = C;
   // Marca o novo destino no mapa
-  set(dest, EstadoCel::DESTINO);
+  set(destino, EstadoCel::DESTINO);
 
   return true;
 }
@@ -255,32 +273,34 @@ void Labirinto::imprimir() const
     return;
   }
 
-  int i,j;
+  int i, j;
 
   // Impressao do cabecalho
   cout << "    ";
-  for (j=0; j<NCol; j++)
+  for (j = 0; j < NCol; j++)
   {
-    cout << setfill('0') << setw(2) << j << setfill(' ') << setw(0) << ' ' ;
+    cout << setfill('0') << setw(2) << j << setfill(' ') << setw(0) << ' ';
   }
   cout << endl;
 
   cout << "   +";
-  for (j=0; j<NCol; j++) cout << "--+" ;
+  for (j = 0; j < NCol; j++)
+    cout << "--+";
   cout << endl;
 
   // Imprime as linhas
-  for (i=0; i<NLin; i++)
+  for (i = 0; i < NLin; i++)
   {
-    cout << setfill('0') << setw(2) << i << setfill(' ') << setw(0) << " |" ;
-    for (j=0; j<NCol; j++)
+    cout << setfill('0') << setw(2) << i << setfill(' ') << setw(0) << " |";
+    for (j = 0; j < NCol; j++)
     {
-      cout << estadoCel2string(at(i,j)) << '|' ;
+      cout << estadoCel2string(at(i, j)) << '|';
     }
     cout << endl;
 
     cout << "   +";
-    for (j=0; j<NCol; j++) cout << "--+" ;
+    for (j = 0; j < NCol; j++)
+      cout << "--+";
     cout << endl;
   }
 }
@@ -288,7 +308,7 @@ void Labirinto::imprimir() const
 /// Leh um mapa do arquivo nome_arq
 /// Caso nao consiga ler do arquivo, cria mapa vazio
 /// Retorna true em caso de leitura bem sucedida
-bool Labirinto::ler(const string& nome_arq)
+bool Labirinto::ler(const string &nome_arq)
 {
   // Limpa o mapa
   clear();
@@ -297,11 +317,12 @@ bool Labirinto::ler(const string& nome_arq)
   ifstream arq(nome_arq);
 
   // Resultado logico da leitura
-  bool resultado=true;
+  bool resultado = true;
 
   try
   {
-    if (!arq.is_open()) throw 1;
+    if (!arq.is_open())
+      throw 1;
 
     string prov;
     int numL, numC;
@@ -310,39 +331,45 @@ bool Labirinto::ler(const string& nome_arq)
     // Leh o cabecalho
     arq >> prov >> numL >> numC;
     if (!arq.good() || prov != "LABIRINTO" ||
-        numL<ALTURA_MIN_MAPA || numL>ALTURA_MAX_MAPA ||
-        numC<LARGURA_MIN_MAPA || numC>LARGURA_MAX_MAPA) throw 2;
+        numL < ALTURA_MIN_MAPA || numL > ALTURA_MAX_MAPA ||
+        numC < LARGURA_MIN_MAPA || numC > LARGURA_MAX_MAPA)
+      throw 2;
 
     // Redimensiona o mapa
     NLin = numL;
     NCol = numC;
-    mapa.resize(NLin*NCol);
+    mapa.resize(NLin * NCol);
 
     // Leh as celulas do arquivo
-    for (int i=0; i<NLin; i++)
-      for (int j=0; j<NCol; j++)
+    for (int i = 0; i < NLin; i++)
+      for (int j = 0; j < NCol; j++)
       {
         arq >> valor;
-        if (!arq.good()) throw 3;
+        if (!arq.good())
+          throw 3;
 
-        if (valor == 0) set(i,j, EstadoCel::OBSTACULO);
-        else set(i,j, EstadoCel::LIVRE);
+        if (valor == 0)
+          set(i, j, EstadoCel::OBSTACULO);
+        else
+          set(i, j, EstadoCel::LIVRE);
       }
   }
   catch (int i)
   {
     resultado = false;
   }
-  if (arq.is_open()) arq.close();
+  if (arq.is_open())
+    arq.close();
   return resultado;
 }
 
 /// Salva um mapa no arquivo nome_arq
 /// Retorna true em caso de escrita bem sucedida
-bool Labirinto::salvar(const string& nome_arq) const
+bool Labirinto::salvar(const string &nome_arq) const
 {
   // Testa o mapa
-  if (empty()) return false;
+  if (empty())
+    return false;
 
   // Abre o arquivo
   ofstream arq(nome_arq);
@@ -355,12 +382,14 @@ bool Labirinto::salvar(const string& nome_arq) const
   arq << "LABIRINTO " << NLin << ' ' << NCol << endl;
 
   // Salva as celulas do mapa
-  for (int i=0; i<NLin; i++)
+  for (int i = 0; i < NLin; i++)
   {
-    for (int j=0; j<NCol; j++)
+    for (int j = 0; j < NCol; j++)
     {
-      if (at(i,j) == EstadoCel::OBSTACULO) arq << 0;
-      else arq << 1;
+      if (at(i, j) == EstadoCel::OBSTACULO)
+        arq << 0;
+      else
+        arq << 1;
       arq << ' ';
     }
     arq << endl;
@@ -388,13 +417,13 @@ bool Labirinto::gerar(int numL, int numC, double perc_obst)
   if (perc_obst <= 0.0)
   {
     perc_obst = PERC_MIN_OBST +
-                (PERC_MAX_OBST-PERC_MIN_OBST)*(rand()/double(RAND_MAX));
+                (PERC_MAX_OBST - PERC_MIN_OBST) * (rand() / double(RAND_MAX));
   }
 
   // Testa os parametros
-  if (numL<ALTURA_MIN_MAPA || numL>ALTURA_MAX_MAPA ||
-      numC<LARGURA_MIN_MAPA || numC>LARGURA_MAX_MAPA ||
-      perc_obst<PERC_MIN_OBST || perc_obst>PERC_MAX_OBST)
+  if (numL < ALTURA_MIN_MAPA || numL > ALTURA_MAX_MAPA ||
+      numC < LARGURA_MIN_MAPA || numC > LARGURA_MAX_MAPA ||
+      perc_obst < PERC_MIN_OBST || perc_obst > PERC_MAX_OBST)
   {
     return false;
   }
@@ -404,15 +433,18 @@ bool Labirinto::gerar(int numL, int numC, double perc_obst)
   NCol = numC;
 
   // Redimensiona o mapa
-  mapa.resize(NLin*NCol);
+  mapa.resize(NLin * NCol);
 
   // Preenche o mapa
   bool obstaculo;
-  for (int i=0; i<NLin; i++) for (int j=0; j<NCol; j++)
+  for (int i = 0; i < NLin; i++)
+    for (int j = 0; j < NCol; j++)
     {
-      obstaculo = (rand()/double(RAND_MAX) <= perc_obst);
-      if (obstaculo) set(i,j, EstadoCel::OBSTACULO);
-      else set(i,j, EstadoCel::LIVRE);
+      obstaculo = (rand() / double(RAND_MAX) <= perc_obst);
+      if (obstaculo)
+        set(i, j, EstadoCel::OBSTACULO);
+      else
+        set(i, j, EstadoCel::LIVRE);
     }
   return true;
 }
@@ -427,7 +459,7 @@ bool Labirinto::gerar(int numL, int numC, double perc_obst)
 /// O parametro NAbert deve conter o numero de nos em aberto ao termino do algoritmo A*
 /// O parametro NFech deve conter o numero de nos em fechado ao termino do algoritmo A*
 /// Mesmo quando nao existe caminho, esses parametros devem ter valor atribuido.
-double Labirinto::calculaCaminho(int& prof, int& NAbert, int& NFech)
+double Labirinto::calculaCaminho(int &prof, int &NAbert, int &NFech)
 {
   // Estas linhas iniciais estao corretas e poderao ser mantidas na sua
   // implementacao final
@@ -445,9 +477,9 @@ double Labirinto::calculaCaminho(int& prof, int& NAbert, int& NFech)
 
   // Apaga um eventual caminho anterior
   limpaCaminho();
-
+ 
   // Testa se origem igual a destino
-  if (orig==dest)
+  if (orig == destino)
   {
     // Caminho tem comprimento e profundidade nula
     compr = 0.0;
@@ -457,16 +489,170 @@ double Labirinto::calculaCaminho(int& prof, int& NAbert, int& NFech)
     // Caminho tem comprimento nulo
     return compr;
   }
+   
 
-  ////////////////////////////
-  //////// FALTA FAZER ///////
-  ////////////////////////////
+  list<Noh> Fechado;
+  list<Noh> Aberto;
+  list<Noh>::iterator old;
+  list<Noh>::iterator pos;
 
-  // Essa parte deve ser suprimida, deixando apenas o
-  //   return compr;
-  // no final
-  compr = -1.0;
-  prof = -1;
-  NAbert = NFech = -1;
+  Noh atual;
+  // Noh old;
+  atual.pos = orig;
+  atual.ant = orig;
+  atual.g = 0.0;
+  atual.h = heuristica(atual.pos, destino);
+  inserir(atual, Aberto);
+
+  Coord dir, dir_ant, dir_viz, prox, viz;
+  Noh suc;
+  //primeira linha
+  while (atual.getPosition() != destino && !Aberto.empty())
+  {
+    atual = Aberto.front();
+    remove_primeiro(Aberto);
+    inserir(atual, Fechado);
+    // segunda linha
+    
+    if (atual.pos != destino)
+    {
+
+      dir_ant = atual.pos - atual.ant;
+      //terceira linha
+      for (dir.lin = -1; dir.lin <= 1; dir.lin++)
+      {
+        for (dir.col = -1; dir.col <= 1; dir.col++)
+        {
+          if (dir != Coord(0, 0))
+          {
+            prox = atual.pos + dir;
+            //quarta
+            if (movimentoValido(atual.pos, prox))
+            {
+              suc.pos = prox;
+              suc.ant = atual.pos;
+              suc.g = atual.g + norm(dir);
+              suc.h = heuristica(suc.pos, destino);
+              //quinta
+              if (dir != dir_ant && dir_ant != Coord(0, 0))
+              {
+                suc.g = suc.g + 0.001;
+              }
+
+              for (dir_viz.lin = -1; dir_viz.lin <= 1; dir_viz.lin++)
+              {
+                for (dir_viz.col = -1; dir_viz.col <= 1; dir_viz.col++)
+                {
+                  if (dir_viz != Coord(0, 0))
+                  {
+                    viz = suc.pos + dir_viz;
+                    if (!(celulaValidaLivre(viz)))
+                    {
+                      suc.g = suc.g + 0.0001;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      bool jah_existe = false;
+      old = find(Aberto.begin(), Aberto.end(), suc.pos);
+      if (old != Aberto.end())
+      {
+        if (suc < *old)
+        {
+          Aberto.erase(old);
+        }
+        else
+        {
+          jah_existe = true;
+        }
+      }
+      else
+      {
+        old = find(Fechado.begin(), Fechado.end(), suc.pos);
+        if (old != Fechado.end())
+        {
+          if (suc < *old)
+          {
+            Fechado.erase(old);
+          }
+          else
+          {
+            jah_existe = true;
+          }
+        }
+      }
+      if (!(jah_existe))
+      {
+        pos = find(Aberto.begin(), Aberto.end(), suc);
+        Aberto.insert(pos, suc);
+      }
+    }
+  }
+
+  while (atual.pos != destino && Aberto.size() != 0)
+  {
+
+    NFech = Fechado.size();
+    NAbert = Aberto.size();
+  }
+  if (atual.pos != destino)
+  {
+    compr = -1.0;
+    prof = -1;
+  }
+  else
+  {
+    compr = atual.g;
+    prof = 1;
+    while ((atual.ant != orig))
+    {
+
+      set(atual.ant, EstadoCel::CAMINHO);
+      atual = *find(Fechado.begin(), Fechado.end(), atual.ant);
+      // atual = procura(atual.ant, Fechado);
+      prof++;
+    }
+  }
   return compr;
 }
+double heuristica(const Coord &pos, const Coord &next)
+{
+  double deltx, delty;
+  deltx = std::abs(next.lin - pos.lin);
+  delty = std::abs(next.col - pos.col);
+  double h = sqrt(2) * min(deltx, delty) + std::abs(deltx - delty);
+  return h;
+}
+void inserir(const Noh atual, list<Noh> &lista)
+{
+  lista.push_back(atual);
+}
+void remove_primeiro(list<Noh> &lista)
+{
+  lista.pop_front();
+}
+// Noh acha_maior(double f, list<Noh> Aberto)
+// {
+//   Noh a;
+//   Noh b;
+//   a = Aberto.front();
+//   b = Aberto.front();
+//   for(int i =0 ; i < Aberto.size();i++){
+//      double f1 = a.g+a.h;
+//      double f2 = b.g+b.h;
+
+//   }
+
+// }
+// void inclui(Noh suc, Noh big, list<Noh> Aberto)
+// {
+//   Aberto.insert(big, suc);
+// }
+// Noh procura(Coord ant, list<Noh> lista)
+// {
+//  return find(lista.begin(), lista.end(), atual.getAnt());
+// }

@@ -3,6 +3,8 @@
 
 #include <vector>
 #include "coord.h"
+#include <cmath>
+#include <list>
 
 using namespace std;
 
@@ -50,7 +52,7 @@ private:
   vector<EstadoCel> mapa;
 
   /// A origem e o destino do caminho
-  Coord orig, dest;
+  Coord orig, destino;
 
   /// Funcao set de alteracao de valor
   void set(int i, int j, EstadoCel valor);
@@ -146,3 +148,83 @@ public:
 };
 
 #endif // _LABIRINTO_H_
+
+
+/// CLASSE Noh
+class Noh
+{
+public:
+    double g,h;
+    Coord pos,ant;
+
+    ///Contrutor defaut
+    inline Noh(): g(0.0),h(0.0),pos(),ant(){}
+
+    ///Fun��es de retorno
+    //custo total
+    inline double getCusto() const {return h + g;}
+
+    //coord da posi��o atual
+    inline Coord getPosition()const{return pos;}
+
+    //retornar uma coord da posi��o anterior
+    inline Coord getPrevious()const{return ant;}
+
+    //retorna o custo at� chegar no noh
+    inline double getG()const{return g;}
+
+    //custo futuro
+    inline double getH()const{return h;}
+
+    ///Altera��o de valor
+
+    //altera o valor at� chegar o noh
+    inline void setG(const double& G){g = G;}
+
+    //altera o valor futuro do noh
+    inline void setH(const double& H){h = H;}
+
+    //muda a pos atual recebendo uma coord
+    inline void setPosition(const Coord& C){pos = C;}
+
+    //muda a posi��o do anterior recebendo um noh
+    inline void setPrevious(const Noh& N){ant = N.getPosition();}
+
+    //muda a posi��o do anterior recebendo uma coord
+    inline void setPrevious(const Coord& C){ant = C;}
+
+    ///Operadores
+    // == para noh
+    inline bool operator==(const Noh& N)const {return getPosition() == N.getPosition();}
+
+    //se um noh == coord
+    inline bool operator==(const Coord& C)const {return getPosition() == C;}
+
+    //se um noh != uma coord
+    inline bool operator!=(const Coord& C)const {return getPosition()!= C;}
+
+    //noh + coord
+    inline Coord operator+(const Coord& C)const {return getPosition()+ C;}
+
+    //se um noh < noh
+    inline bool operator<(const Noh &N)const {return getCusto() < N.getCusto();}
+
+    //calculo do custo futuro
+    
+    
+};
+/// Os elementos dos conjuntos de busca do algoritmo A*
+class posi{
+private:
+    double custo;
+public:
+    inline posi(const Noh & N):custo(N.getCusto()){}
+    inline bool operator()(const Noh& N)const{return custo < N.getCusto();}
+};
+
+void inserir(const Noh atual,list<Noh> &Aberto);
+double heuristica(const Coord& pos,const Coord& Dest);
+void remove_primeiro(list<Noh> &Aberto);
+Noh acha_maior(double f ,list<Noh> Aberto);
+void inclui(Noh suc ,Noh big,list<Noh> Aberto);
+Noh procura(Coord ant , list<Noh> nohs);
